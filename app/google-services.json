@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1031126530390",
+    "project_id": "smartbuy-9334e",
+    "storage_bucket": "smartbuy-9334e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1031126530390:android:f03cd77421cc8515927ef7",
+        "android_client_info": {
+          "package_name": "com.example.smartbuysaludo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByKjZAEPWMHMeKWI_H8BH1Qm_m_VTn2kI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
