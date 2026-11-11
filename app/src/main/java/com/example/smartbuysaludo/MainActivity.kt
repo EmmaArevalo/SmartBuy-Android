@@ -54,6 +54,23 @@ fun SmartBuyApp() {
         }
     }
 
+    val sesion = usuario
+    if (sesion != null) {
+        key(sesion.uid) {
+            TiendaSmartBuy(
+                onCerrarSesion = {
+                    auth.signOut()
+                    correo = ""
+                    clave = ""
+                    confirmacion = ""
+                    mensaje = ""
+                    registro = false
+                }
+            )
+        }
+        return
+    }
+
     Scaffold(modifier = Modifier.fillMaxSize()) { espacio ->
         Column(
             modifier = Modifier
@@ -73,58 +90,47 @@ fun SmartBuyApp() {
 
             Spacer(Modifier.height(12.dp))
 
-            if (usuario != null) {
-                Text(
-                    text = "¡Bienvenido a Smart Buy!",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+            Text(
+                text = if (registro) "Crear cuenta" else "Iniciar sesión",
+                style = MaterialTheme.typography.headlineSmall
+            )
 
-                Spacer(Modifier.height(20.dp))
-                Text("Has iniciado sesión correctamente.")
-                Spacer(Modifier.height(12.dp))
-                Text("Cuenta: ${usuario?.email.orEmpty()}")
+            Spacer(Modifier.height(24.dp))
 
-                Spacer(Modifier.height(28.dp))
+            OutlinedTextField(
+                value = correo,
+                onValueChange = { correo = it },
+                label = { Text("Correo electrónico") },
+                singleLine = true,
+                enabled = !cargando,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                Button(
-                    onClick = {
-                        auth.signOut()
-                        correo = ""
-                        clave = ""
-                        confirmacion = ""
-                        mensaje = ""
-                        registro = false
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Cerrar sesión")
-                }
-            } else {
-                Text(
-                    text = if (registro) "Crear cuenta" else "Iniciar sesión",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+            Spacer(Modifier.height(16.dp))
 
-                Spacer(Modifier.height(24.dp))
+            OutlinedTextField(
+                value = clave,
+                onValueChange = { clave = it },
+                label = { Text("Contraseña") },
+                singleLine = true,
+                enabled = !cargando,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                OutlinedTextField(
-                    value = correo,
-                    onValueChange = { correo = it },
-                    label = { Text("Correo electrónico") },
-                    singleLine = true,
-                    enabled = !cargando,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+            if (registro) {
                 Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = clave,
-                    onValueChange = { clave = it },
-                    label = { Text("Contraseña") },
+                    value = confirmacion,
+                    onValueChange = { confirmacion = it },
+                    label = { Text("Confirmar contraseña") },
                     singleLine = true,
                     enabled = !cargando,
                     visualTransformation = PasswordVisualTransformation(),
@@ -134,107 +140,90 @@ fun SmartBuyApp() {
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                if (registro) {
-                    Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
+                Text("Usa una contraseña de al menos 6 caracteres.")
+            }
 
-                    OutlinedTextField(
-                        value = confirmacion,
-                        onValueChange = { confirmacion = it },
-                        label = { Text("Confirmar contraseña") },
-                        singleLine = true,
-                        enabled = !cargando,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            if (mensaje.isNotBlank()) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = mensaje,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
 
-                    Spacer(Modifier.height(8.dp))
-                    Text("Usa una contraseña de al menos 6 caracteres.")
-                }
+            Spacer(Modifier.height(24.dp))
 
-                if (mensaje.isNotBlank()) {
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = mensaje,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
+            Button(
+                enabled = !cargando,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    val email = correo.trim()
+                    mensaje = ""
 
-                Spacer(Modifier.height(24.dp))
+                    when {
+                        email.isBlank() || clave.isBlank() -> {
+                            mensaje = "Completa el correo y la contraseña."
+                        }
 
-                Button(
-                    enabled = !cargando,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        val email = correo.trim()
-                        mensaje = ""
+                        !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                            mensaje = "Escribe un correo electrónico válido."
+                        }
 
-                        when {
-                            email.isBlank() || clave.isBlank() -> {
-                                mensaje = "Completa el correo y la contraseña."
+                        registro && clave.length < 6 -> {
+                            mensaje = "La contraseña debe tener al menos 6 caracteres."
+                        }
+
+                        registro && clave != confirmacion -> {
+                            mensaje = "Las contraseñas no coinciden."
+                        }
+
+                        else -> {
+                            cargando = true
+
+                            val tarea = if (registro) {
+                                auth.createUserWithEmailAndPassword(email, clave)
+                            } else {
+                                auth.signInWithEmailAndPassword(email, clave)
                             }
 
-                            !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
-                                mensaje = "Escribe un correo electrónico válido."
-                            }
+                            tarea.addOnCompleteListener { resultado ->
+                                cargando = false
 
-                            registro && clave.length < 6 -> {
-                                mensaje = "La contraseña debe tener al menos 6 caracteres."
-                            }
-
-                            registro && clave != confirmacion -> {
-                                mensaje = "Las contraseñas no coinciden."
-                            }
-
-                            else -> {
-                                cargando = true
-
-                                val tarea = if (registro) {
-                                    auth.createUserWithEmailAndPassword(email, clave)
+                                if (resultado.isSuccessful) {
+                                    usuario = auth.currentUser
+                                    clave = ""
+                                    confirmacion = ""
+                                    mensaje = ""
                                 } else {
-                                    auth.signInWithEmailAndPassword(email, clave)
-                                }
-
-                                tarea.addOnCompleteListener { resultado ->
-                                    cargando = false
-
-                                    if (resultado.isSuccessful) {
-                                        usuario = auth.currentUser
-                                        clave = ""
-                                        confirmacion = ""
-                                        mensaje = ""
-                                    } else {
-                                        mensaje = mensajeError(resultado.exception)
-                                    }
+                                    mensaje = mensajeError(resultado.exception)
                                 }
                             }
                         }
                     }
-                ) {
-                    Text(
-                        if (cargando) "Procesando..."
-                        else if (registro) "Registrarme"
-                        else "Ingresar"
-                    )
                 }
+            ) {
+                Text(
+                    if (cargando) "Procesando..."
+                    else if (registro) "Registrarme"
+                    else "Ingresar"
+                )
+            }
 
-                TextButton(
-                    enabled = !cargando,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        registro = !registro
-                        mensaje = ""
-                        clave = ""
-                        confirmacion = ""
-                    }
-                ) {
-                    Text(
-                        if (registro) "Ya tengo cuenta. Iniciar sesión"
-                        else "No tengo cuenta. Registrarme"
-                    )
+            TextButton(
+                enabled = !cargando,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    registro = !registro
+                    mensaje = ""
+                    clave = ""
+                    confirmacion = ""
                 }
+            ) {
+                Text(
+                    if (registro) "Ya tengo cuenta. Iniciar sesión"
+                    else "No tengo cuenta. Registrarme"
+                )
             }
         }
     }
